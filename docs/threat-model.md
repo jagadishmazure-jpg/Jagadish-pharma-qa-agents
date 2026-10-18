@@ -18,7 +18,7 @@
 ## Information disclosure
 - Gateway errors never echo row data. Escalation messages carry error classes,
   not raw output.
-- Feedback free text is PII-scrubbed (email/phone/SSN/account patterns)
+- Feedback free text is PII-scrubbed (email/phone incl. `(555) 123-4567`/SSN/card/account patterns)
   before storage; redaction counts are kept for audit.
 
 ## Denial of service
@@ -34,6 +34,6 @@
 - **Prompt injection:** user questions are keyword-routed to fixed intents;
   there is no free-form SQL generation to hijack.
 - **Insecure output handling:** the gateway is the choke point — every query
-  passes SEC-SELECT-01/02/03 regardless of which intent produced it.
+  passes SEC-SELECT-01/02/03/04 regardless of which intent produced it.
 - **Over-reliance:** the agent never releases batches; gated actions require
   named human approvers.

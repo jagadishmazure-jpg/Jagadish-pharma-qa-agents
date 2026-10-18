@@ -6,30 +6,34 @@ classification cites the rule ID that fired plus the matched evidence.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import re
+from dataclasses import dataclass
+
+
+def _has(t: str, d: str, stems) -> bool:
+    """Keyword match at a word start (\"oos\" must not match \"loose\")."""
+    text = (t + " " + d).lower()
+    return any(re.search(r"\b" + re.escape(k) + (r"\b" if len(k) <= 3 else ""), text) for k in stems)
 
 # (rule_id, resulting class, predicate description, match function)
 _RULES = [
     ("CLASS-01", "critical",
      "sterility, data-integrity, or patient-safety impact",
-     lambda t, d: any(k in (t + " " + d).lower()
-                      for k in ("steril", "data integrity", "patient safety",
+     lambda t, d: _has(t, d, ("steril", "data integrity", "patient safety",
                                 "adulterat", "contaminat"))),
     ("CLASS-02", "critical",
      "repeat of a previously classified critical root cause",
      lambda t, d: False),  # applied by classify_repeat, not text
     ("CLASS-03", "major",
      "batch rejection risk, validation gap, or specification failure",
-     lambda t, d: any(k in (t + " " + d).lower()
-                      for k in ("validation gap", "out of specification",
+     lambda t, d: _has(t, d, ("validation gap", "out of specification",
                                 "oos", "rejection", "residue", "excursion"))),
     ("CLASS-04", "major",
      "repeat occurrence of the same root cause",
      lambda t, d: False),  # applied by classify_repeat, not text
     ("CLASS-05", "minor",
      "documentation-only, no product impact",
-     lambda t, d: any(k in (t + " " + d).lower()
-                      for k in ("logbook", "typo", "font", "documentation",
+     lambda t, d: _has(t, d, ("logbook", "typo", "font", "documentation",
                                 "correction", "readability"))),
 ]
 

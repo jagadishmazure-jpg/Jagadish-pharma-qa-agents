@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
     import streamlit as st
 except ImportError:  # pragma: no cover
-    raise SystemExit("pip install streamlit, then: streamlit run demo/app.py")
+    raise SystemExit("pip install streamlit, then: streamlit run demo/app.py") from None
 
 from pharmaqa import demo_helpers as dh
 from pharmaqa.audit import AuditLog
@@ -18,7 +18,7 @@ from pharmaqa.views import create_views
 
 st.set_page_config(page_title="Pharma QA Ops — agent demo", layout="wide")
 st.title("Pharma QA deviation management — agent demo")
-st.caption("Synthetic data · Meridian Therapeutics (fictional) · Newbridge site")
+st.caption("Synthetic data · Orvanthe Therapeutics (fictional) · Newbridge site")
 
 conn = build_db()
 create_views(conn)
