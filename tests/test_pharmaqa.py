@@ -1,14 +1,14 @@
 """Tests for pharmaqa. Deterministic; no network; stdlib only."""
 
-import sqlite3
+
+import os
 
 import pytest
 
 from pharmaqa import demo_helpers as dh
 from pharmaqa.audit import AuditLog
 from pharmaqa.classify import classify, classify_repeat
-from pharmaqa.escalation import (ALWAYS_GATED, ConfirmationGate, GateError,
-                                 TIERS, tier_for)
+from pharmaqa.escalation import ALWAYS_GATED, TIERS, ConfirmationGate, GateError, tier_for
 from pharmaqa.feedback import FeedbackError, list_feedback, record_feedback
 from pharmaqa.orchestrator import Orchestrator
 from pharmaqa.pii import scrub
@@ -16,10 +16,9 @@ from pharmaqa.regsignal import FakeRegFeed, GapError, LiveRegFeed
 from pharmaqa.release import evaluate
 from pharmaqa.sop_rag import SopRetriever, load_chunks
 from pharmaqa.telemetry import ANCHORS, build_db
-from pharmaqa.text2sql import EscalationNeeded, answer, detect_intent
+from pharmaqa.text2sql import EscalationNeeded, answer
 from pharmaqa.views import GatewayError, create_views, run_query
 
-import os
 SOP_DIR = os.path.join(os.path.dirname(__file__), "..", "docs", "sops")
 
 
@@ -426,3 +425,67 @@ def test_format_release_blocked(conn):
     dec = evaluate(conn, "BATCH-2026-0142")
     text = dh.format_release(dec)
     assert "BLOCKED" in text and "qa_reviewer" in text
+
+
+# ---------- review fixes (grokbot-portfolio, 2026-10-18) ----------
+
+def _sign(conn, batch, role, date, decision="approved", who="T. Tester"):
+    conn.execute("INSERT INTO signoffs VALUES (?,?,?,?,?,?,?)",
+                 (f"SO-{batch}-{role}", batch, role, who, decision, "test", date))
+
+
+@pytest.mark.parametrize("batch, detail", [
+    ("BATCH-2026-0146", "criterion met; awaiting signature"),   # no sign-offs at all
+    ("BATCH-2026-0147", "batch was rejected"),
+    ("BATCH-9999-0000", "unknown batch"),
+])
+def test_review_release_needs_recorded_signatures_and_a_real_batch(conn, batch, detail):
+    dec = evaluate(conn, batch)
+    assert not dec.released and dec.blocking()[0].detail == detail
+
+
+def test_review_release_with_all_three_signatures_in_order(conn):
+    for role, day in (("qa_reviewer", "2026-10-13"), ("qa_manager", "2026-10-14"),
+                      ("qualified_person", "2026-10-15")):
+        _sign(conn, "BATCH-2026-0146", role, day)
+    dec = evaluate(conn, "BATCH-2026-0146")
+    assert dec.released and [r.signed_by for r in dec.roles] == ["T. Tester"] * 3
+
+
+def test_review_signature_before_previous_role_blocks(conn):
+    _sign(conn, "BATCH-2026-0146", "qa_reviewer", "2026-10-15")
+    _sign(conn, "BATCH-2026-0146", "qa_manager", "2026-10-14")
+    dec = evaluate(conn, "BATCH-2026-0146")
+    assert not dec.released
+    assert dec.blocking()[0].role == "qa_manager" and "before the previous role" in dec.blocking()[0].detail
+
+
+def test_review_capa_past_due_date_blocks_even_if_status_is_not_overdue(conn):
+    conn.execute("UPDATE capas SET status = 'in_progress' WHERE capa_id = 'CAPA-009'")  # due 2026-10-12
+    dec = evaluate(conn, "BATCH-2026-0143")
+    assert dec.blocking()[0].role == "qa_manager" and "CAPA-009" in dec.blocking()[0].detail
+
+
+def test_review_released_anchor_cites_signers(conn):
+    dec = evaluate(conn, "BATCH-2026-0145")
+    assert dec.released and dec.roles[-1].detail == "signed by D. Reyes on 2026-09-22"
+
+
+@pytest.mark.parametrize("title, rule", [
+    ("Loose logbook binding", "CLASS-05"),       # "oos" inside "loose" used to fire CLASS-03
+    ("Boost pump logbook typo", "CLASS-05"),
+    ("OOS assay result", "CLASS-03"),
+])
+def test_review_classifier_matches_whole_keywords(title, rule):
+    assert classify(title, "documentation only").rule_id == rule
+
+
+@pytest.mark.parametrize("text", ["call (555) 123-4567", "call +1 (555) 123-4567", "call 555.123.4567"])
+def test_review_phone_formats_scrubbed(text):
+    out, n = scrub(text)
+    assert "123" not in out and n == 1
+
+
+def test_review_dates_and_batch_ids_kept():
+    text = "BATCH-2026-0142 on 2026-10-18"
+    assert scrub(text) == (text, 0)

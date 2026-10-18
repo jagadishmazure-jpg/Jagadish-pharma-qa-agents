@@ -4,7 +4,7 @@
 flowchart TD
     U[QA user question] --> O[Orchestrator: ReAct planner]
     O -->|intent: deviations/capa/audit| T[text2sql: 5 fixed intents]
-    T --> G[SELECT-only gateway<br/>SEC-SELECT-01/02/03]
+    T --> G[SELECT-only gateway<br/>SEC-SELECT-01..04<br/>+ SQLite authorizer]
     G --> V[(4 read-only views<br/>on SQLite telemetry)]
     O -->|intent: sop| R[TF-IDF SOP retriever<br/>citations, explicit not-found]
     O -->|intent: regulatory| S[Regulatory signal<br/>fake seeded / live gap]
@@ -23,7 +23,7 @@ flowchart TD
    SELECT-only gateway; SOP questions go to TF-IDF retrieval; regulatory
    questions go to the fake feed (the live stub reports a gap).
 3. Release questions run the sign-off chain: each role's criterion is checked
-   against live data and the first failing role blocks the chain with its
-   reason cited.
+   against live data and its approved sign-off must be recorded, in role
+   order; the first failing role blocks the chain with its reason cited.
 4. Every turn, classification, and gate decision is appended to the
    hash-chained audit log; user feedback is PII-scrubbed before storage.

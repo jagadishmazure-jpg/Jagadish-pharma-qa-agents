@@ -1,6 +1,6 @@
 """Synthetic pharma QA telemetry on SQLite.
 
-Fictional site "Newbridge" of the invented manufacturer Meridian Therapeutics.
+Fictional site "Newbridge" of the invented manufacturer Orvanthe Therapeutics.
 All data is synthetic and deterministic (seeded) so every run matches the
 README figures and the tests.
 """
@@ -68,12 +68,12 @@ def build_db(path: str = ":memory:") -> sqlite3.Connection:
 
     batches = [
         # batch_id, product, site, status, mfg_date
-        ("BATCH-2026-0142", "Cardiorex 50mg", "Newbridge", "on_hold", "2026-09-28"),
-        ("BATCH-2026-0143", "Cardiorex 50mg", "Newbridge", "qa_review", "2026-10-02"),
-        ("BATCH-2026-0144", "Neurovia 10mg", "Newbridge", "qa_review", "2026-10-05"),
-        ("BATCH-2026-0145", "Neurovia 10mg", "Newbridge", "released", "2026-09-15"),
-        ("BATCH-2026-0146", "Dermaclear cream", "Newbridge", "manufacturing", "2026-10-12"),
-        ("BATCH-2026-0147", "Cardiorex 50mg", "Newbridge", "rejected", "2026-08-30"),
+        ("BATCH-2026-0142", "Cardivane 50mg", "Newbridge", "on_hold", "2026-09-28"),
+        ("BATCH-2026-0143", "Cardivane 50mg", "Newbridge", "qa_review", "2026-10-02"),
+        ("BATCH-2026-0144", "Neurolisk 10mg", "Newbridge", "qa_review", "2026-10-05"),
+        ("BATCH-2026-0145", "Neurolisk 10mg", "Newbridge", "released", "2026-09-15"),
+        ("BATCH-2026-0146", "Dermiquell cream", "Newbridge", "manufacturing", "2026-10-12"),
+        ("BATCH-2026-0147", "Cardivane 50mg", "Newbridge", "rejected", "2026-08-30"),
     ]
     conn.executemany("INSERT INTO batches VALUES (?,?,?,?,?)", batches)
 

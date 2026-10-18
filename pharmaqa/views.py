@@ -7,13 +7,20 @@ Rule IDs (cited in tests and README):
                  rejected even when hidden inside the statement — string
                  literals are stripped before the scan so 'UPDATE' inside a
                  quoted value does not false-positive.
-  SEC-SELECT-03: every query is capped at 100 rows.
+  SEC-SELECT-03: every query is capped at 100 rows (rows past the cap are
+                 never fetched).
+  SEC-SELECT-04: only the read-only views may be read. Enforced by a SQLite
+                 authorizer (pharmaqa/authz.py, ADR 0001), so comma joins,
+                 quoted names and comments cannot reach base tables or
+                 sqlite_master.
 """
 
 from __future__ import annotations
 
 import re
 import sqlite3
+
+from . import authz
 
 ROW_CAP = 100
 
@@ -86,9 +93,14 @@ def run_query(conn: sqlite3.Connection, sql: str):
         raise GatewayError("SEC-SELECT-01: only SELECT statements are allowed")
     if _WRITE_KEYWORDS.search(_strip_literals(cleaned)):
         raise GatewayError("SEC-SELECT-02: write keywords are not allowed")
-    cur = conn.execute(cleaned)
-    rows = cur.fetchmany(ROW_CAP + 1)
-    if len(rows) > ROW_CAP:
-        rows = rows[:ROW_CAP]  # SEC-SELECT-03
-    cols = [d[0] for d in cur.description] if cur.description else []
+    with authz.views_only(conn, _VIEWS) as denied:
+        try:
+            cur = conn.execute(cleaned)
+        except sqlite3.DatabaseError:
+            if denied:
+                raise GatewayError(
+                    f"SEC-SELECT-04: '{denied[0]}' is not a read-only view") from None
+            raise
+        rows = cur.fetchmany(ROW_CAP)  # SEC-SELECT-03
+        cols = [d[0] for d in cur.description] if cur.description else []
     return cols, [dict(zip(cols, r)) for r in rows]
