@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pharmaqa"
+version = "0.1.0"
+description = "End-to-end pharmaceutical QA deviation management (synthetic data)"
+requires-python = ">=3.10"
+
+[tool.hatch.build.targets.wheel]
+packages = ["pharmaqa"]
