@@ -11,7 +11,7 @@ controlled records, with citations.
 > over read-only views, a deviation classifier with cited rules, and a
 > three-role batch-release sign-off chain (reviewer → manager → Qualified
 > Person) that releases only on recorded signatures in order and blocks with the
-> exact missing criterion named. 93 tests, all green; the demo batch
+> exact missing criterion named. 107 tests, all green; the demo batch
 > BATCH-2026-0142 is blocked by its open critical sterility deviation while
 > BATCH-2026-0145 releases with all three signatures.
 
@@ -64,7 +64,7 @@ the word "critical", which here means product impact, not patient acuity.
 ## Quickstart
 
 ```bash
-python -m pytest tests/ -q          # 93 tests, stdlib only
+python -m pytest tests/ -q          # 107 tests, stdlib only
 pip install streamlit               # optional, demo only
 streamlit run demo/app.py
 ```
@@ -135,7 +135,7 @@ Batch BATCH-2026-0142: BLOCKED
 
 Reviewed against the portfolio standard after the build. Bugs found and fixed, each now pinned by a test:
 
-1. **Gateway had no view allowlist.** It blocked writes, but `SELECT * FROM signoffs`, a comma join, `"sqlite_master"` and `FROM/**/signoffs` all read base tables or the schema (the 100-row cap already held at fetch time). A SQLite authorizer (`pharmaqa/authz.py`, ADR 0001) now refuses any read that is not a published view (`SEC-SELECT-04`).
+1. **Gateway had no view allowlist.** It blocked writes, but `SELECT * FROM signoffs`, a comma join, `"sqlite_master"` and `FROM/**/signoffs` all read base tables or the schema (the 100-row cap already held at fetch time). A SQLite authorizer (`pharmaqa/authz.py`, ADR 0001) now refuses any read that is not a published view (`SEC-SELECT-04`). Synced to the shared template v3 on 2026-10-18: `load_extension` is denied explicitly and `sqlite_master` stays denied even if listed as allowed (`tests/test_authorizer_sync.py`).
 2. **Batches released without a single signature.** `evaluate()` only checked the three criteria and never read the `signoffs` table, so BATCH-2026-0146 (still in manufacturing, no sign-offs), BATCH-2026-0147 (already rejected) and a batch ID that does not exist all came back RELEASED. A role now passes only when its criterion holds *and* an approved sign-off by that role is recorded, dated no earlier than the previous role's (SOP-QA-002: "three approvals in order"); unknown and rejected batches never release.
 3. **A CAPA past its due date did not block.** Only `status = 'overdue'` counted, so an `open` CAPA 17 days late let the QA manager gate pass, against SOP-QA-003 ("A CAPA past its due date becomes overdue and blocks the QA manager sign-off"). Overdue now means status *or* due date before `AS_OF`.
 4. **Classifier keywords matched inside words.** `oos` (out of specification) fired on "loose" and "boost", turning a documentation-only deviation into a major. Keywords now match at word starts (`oos` as a whole word).
@@ -176,7 +176,7 @@ Test count (also checked by CI):
 
 <!-- run: python scripts/count_tests.py -->
 ```text
-93 tests collected
+107 tests collected
 ```
 <!-- /run -->
 

@@ -30,3 +30,14 @@ row cap is enforced with `fetchmany`, not only by rewriting `LIMIT`.
   self-join). That read is allowed only for tables behind an allowed view;
   it exposes no column data, at most a whole-table row count
   (`SELECT count(*) FROM <table behind a view>`).
+
+## Revision (2026-10-18): shared template v3
+
+`pharmaqa/authz.py` is now the portfolio's shared authorizer template (v3).
+Compared with the earlier copy it denies `load_extension` explicitly and
+denies the schema tables even if a caller lists one as allowed, and it
+allows a view's empty-column reads only for tables actually behind the
+allowed views. `tests/test_authorizer_sync.py` drives the authorizer
+directly (no text gateway) and fails on the earlier copy. Residual,
+accepted: a column-free `count(*)` on a table behind a view can reveal a
+row count, never values.
